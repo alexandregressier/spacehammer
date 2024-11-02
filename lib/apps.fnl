@@ -122,25 +122,24 @@ This module works mechanically similar to lib/modal.fnl.
 ;; Apps Navigation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(fn by-key
+(fn by-bundle-id
   [target]
   "
-  Checker to search for app definitions to find the app with a key property
+  Checker to search for app definitions to find the app with a bundle ID property
   that matches the target.
-  Takes a target key string
+  Takes a target bundle ID string
   Returns a predicate that takes an app menu table and returns true if
-  app.key == target
+  app.bundle-id == target
   "
   (fn [app]
-    (= app.key target)))
-
+    (= app.bundle-id target)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Transitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (fn ->enter
-  [state action app-name]
+  [state action bundle-id]
   "
   Transitions the app state machine from the general, shared key bindings to an
   app we have local keybindings for.
@@ -150,13 +149,12 @@ This module works mechanically similar to lib/modal.fnl.
   "
   (let [{: apps
          : app} state.context
-        next-app (find (by-key app-name) apps)]
+        next-app (find (by-bundle-id bundle-id) apps)]
     {:state {:current-state :in-app
              :context {:apps apps
                        :app next-app
                        :prev-app app}}
      :effect :enter-app-effect}))
-
 
 (fn in-app->leave
   [state action app-name]
@@ -174,7 +172,7 @@ This module works mechanically similar to lib/modal.fnl.
    :effect :leave-app-effect})
 
 (fn launch-app
-  [state action app-name]
+  [state action bundle-id]
   "
   Using the state machine we also react to launching apps by calling the :launch
   lifecycle method on apps defined in a user's config.fnl. This way they can run
@@ -185,7 +183,7 @@ This module works mechanically similar to lib/modal.fnl.
   "
   (let [{: apps
          : app} state.context
-        next-app (find (by-key app-name) apps)]
+        next-app (find (by-bundle-id bundle-id) apps)]
     {:state {:current-state :in-app
              :context {:apps apps
                        :app next-app
@@ -257,30 +255,31 @@ Assign some simple keywords for each hs.application.watcher event type.
   corresponding action against the state machine to manage side-effects and
   update their state.
 
-  Takes the name of the app, the hs.application.watcher event-type, an the
+  Takes the name of the app, the hs.application.watcher event-type, and the
   hs.application.instance that triggered the event.
   Returns nil. Relies on side-effects.
   "
-  (let [event-type (. app-events event)]
-    (if (= event-type :activated)
-        (enter app-name)
-        (= event-type :deactivated)
-        (leave app-name)
-        (= event-type :launched)
-        (launch app-name)
-        (= event-type :terminated)
-        (close app-name))))
+  (let [event-type (. app-events event)
+        bundle-id (and app (: app :bundleID))]
+    (when bundle-id
+      (if (= event-type :activated)
+          (enter bundle-id)
+          (= event-type :deactivated)
+          (leave bundle-id)
+          (= event-type :launched)
+          (launch bundle-id)
+          (= event-type :terminated)
+          (close bundle-id)))))
 
-(fn active-app-name
+(fn active-app-bundle-id
   []
   "
-  Internal API function to return the name of the frontmost app
-  Returns the name of the app if there is a frontmost app or nil.
+  Internal API function to return the bundle ID of the frontmost app
+  Returns the bundle ID of the app if there is a frontmost app or nil.
   "
   (let [app (hs.application.frontmostApplication)]
-    (if app
-        (: app :name)
-        nil)))
+    (when app
+      (: app :bundleID))))
 
 (fn start-logger
   [fsm]
@@ -292,7 +291,13 @@ Assign some simple keywords for each hs.application.watcher event type.
    fsm.state :log-state
    (fn log-state
      [state]
-     (log.df "app is now: %s" (and state.context.app state.context.app.key)))))
+     (let [current-app (hs.application.frontmostApplication)
+           bundle-id (and current-app (: current-app :bundleID))
+           app-name (and current-app (: current-app :name))
+           config-app (and state.context.app state.context.app.bundle-id)]
+       (if config-app
+           (log.df "app is now: %s (%s) – Managed" app-name bundle-id)
+           (log.df "app is now: %s (%s) – Unmanaged" app-name bundle-id))))))
 
 (fn watch-actions
   [{: prev-state : next-state : action : effect : extra}]
@@ -416,7 +421,7 @@ Assign some simple keywords for each hs.application.watcher event type.
   Takes the current config.fnl table
   Returns a function to cleanup the hs.application.watcher.
   "
-  (let [active-app (active-app-name)
+  (let [active-app (active-app-bundle-id)
         initial-context {:apps config.apps
                          :app nil}
         template {:state {:current-state :general-app
@@ -432,7 +437,6 @@ Assign some simple keywords for each hs.application.watcher event type.
     (: app-watcher :start)
     (fn cleanup []
       (: app-watcher :stop))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Exports

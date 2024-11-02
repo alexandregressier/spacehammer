@@ -69,7 +69,7 @@ switching menus in one place which is then powered by config.fnl.
   modal on screen)
   Side effectful
   "
-  (fsm.send :activate menu-key))
+  (fsm.send :activate nil))
 
 (fn enter-modal
   [menu-key]
@@ -84,6 +84,10 @@ switching menus in one place which is then powered by config.fnl.
   "
   (fsm.send :enter menu-key))
 
+(fn activate-enter-modal
+  [menu-key]
+  (fsm.send :activate nil)
+  (fsm.send :enter menu-key))
 
 (fn deactivate-modal
   []
@@ -497,4 +501,5 @@ switching menus in one place which is then powered by config.fnl.
 
 
 {: init
- : activate-modal}
+ : activate-modal
+ : activate-enter-modal}

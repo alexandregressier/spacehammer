@@ -69,16 +69,17 @@
   Returns a function to remove bindings.
   "
   (let [modal (hs.hotkey.modal.new [] nil)]
-    (each [_ item (ipairs items)]
-      (let [{:key key
-             :mods mods
-             :action action
-             :repeat repeat} item
-            mods (or mods [])
-            action-fn (action->fn action)]
-        (if repeat
-            (: modal :bind mods key action-fn nil action-fn)
-            (: modal :bind mods key nil action-fn))))
+    (when (and items (= :table (type items)))
+      (each [_ item (ipairs items)]
+        (let [{:key key
+               :mods mods
+               :action action
+               :repeat repeat} item
+              mods (or mods [])
+              action-fn (action->fn action)]
+          (if repeat
+              (: modal :bind mods key action-fn nil action-fn)
+              (: modal :bind mods key nil action-fn)))))
     (: modal :enter)
     (fn destroy-bindings
       []

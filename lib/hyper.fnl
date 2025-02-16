@@ -1,3 +1,4 @@
+(local LeftRightHotkey (require :lib.leftrighthotkey))
 (require-macros :lib.macros)
 (local {: find} (require :lib.functional))
 
@@ -13,7 +14,7 @@
 ;; - In config.fnl, put :hyper in a global key binding's mods list like [:hyper]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(var hyper (hs.hotkey.modal.new))
+(var hyper (LeftRightHotkey.modal.new))
 (var enabled false)
 
 (fn enter-hyper-mode
@@ -24,7 +25,7 @@
   hotkey modal.
   "
   (set enabled true)
-  (: hyper :enter))
+  (LeftRightHotkey.modal.enter hyper))
 
 (fn exit-hyper-mode
   []
@@ -34,7 +35,7 @@
   hyper mode
   "
   (set enabled false)
-  (: hyper :exit))
+  (LeftRightHotkey.modal.exit hyper))
 
 (fn unbind-key
   [key]
@@ -46,7 +47,7 @@
   (when-let [binding (find (fn [{:msg msg}]
                              (= msg key))
                            hyper.keys)]
-            (: binding :delete)))
+            (LeftRightHotkey.delete binding)))
 
 (fn bind
   [key f]
@@ -55,7 +56,7 @@
   Takes a key string and a function to call when key is pressed
   Returns a function to remove the binding for this key.
   "
-  (: hyper :bind nil key nil f)
+  (LeftRightHotkey.modal.bind hyper nil key nil f)
   (fn unbind
     []
     (unbind-key key)))
@@ -73,7 +74,7 @@
   - release <function> A function to bind when the key is released
   - repeat <function> A function to bind when thek ey is repeated
   "
-  (: hyper :bind nil key press-f release-f repeat-f)
+  (LeftRightHotkey.modal.bind hyper nil key press-f release-f repeat-f)
   (fn unbind
     []
     (unbind-key key)))
@@ -89,10 +90,10 @@
     release.
   "
   (let [h (or config.hyper {})]
-    (hs.hotkey.bind (or h.mods [])
-                    h.key
-                    enter-hyper-mode
-                    exit-hyper-mode)))
+    (LeftRightHotkey.bind (or h.mods [])
+                          h.key
+                          enter-hyper-mode
+                          exit-hyper-mode)))
 
 (fn enabled?
   []

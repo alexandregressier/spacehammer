@@ -1,3 +1,4 @@
+(local LeftRightHotkey (require :lib.leftrighthotkey))
 (local hyper (require :lib.hyper))
 (local {: contains?
         : map
@@ -68,7 +69,7 @@
   Performs side-effect of binding hotkeys to action functions.
   Returns a function to remove bindings.
   "
-  (let [modal (hs.hotkey.modal.new [] nil)]
+  (let [modal (LeftRightHotkey.modal.new [] nil)]
     (when (and items (= :table (type items)))
       (each [_ item (ipairs items)]
         (let [{:key key
@@ -78,14 +79,14 @@
               mods (or mods [])
               action-fn (action->fn action)]
           (if repeat
-              (: modal :bind mods key action-fn nil action-fn)
-              (: modal :bind mods key nil action-fn)))))
-    (: modal :enter)
+              (LeftRightHotkey.modal.bind modal mods key action-fn nil action-fn)
+              (LeftRightHotkey.modal.bind modal mods key nil action-fn)))))
+    (LeftRightHotkey.modal.enter modal)
     (fn destroy-bindings
       []
       (when modal
-        (: modal :exit)
-        (: modal :delete)))))
+        (LeftRightHotkey.modal.exit modal)
+        (LeftRightHotkey.modal.delete modal)))))
 
 (fn bind-global-keys
   [items]
@@ -102,10 +103,10 @@
            action-fn (action->fn item.action)]
        (if (contains? :hyper mods)
            (hyper.bind key action-fn)
-           (let [binding (hs.hotkey.bind mods key action-fn)]
+           (let [binding (LeftRightHotkey.bind mods key action-fn)]
              (fn unbind
                []
-               (: binding :delete))))))
+               (LeftRightHotkey.delete binding))))))
    items))
 
 (fn unbind-global-keys

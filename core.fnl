@@ -10,6 +10,7 @@
         :split     split
         :some      some} (require :lib.functional))
 (local atom (require :lib.atom))
+(local LeftRightHotkey (require :lib.leftrighthotkey))
 (require-macros :lib.macros)
 (require-macros :lib.advice.macros)
 
@@ -226,6 +227,8 @@ Returns nil. This function causes side-effects.
            :override get-config
            "Returns global config obj"
            config)
+
+(LeftRightHotkey.start)
 
 ;; Create a global reference so services like hs.application.watcher
 ;; do not get garbage collected.

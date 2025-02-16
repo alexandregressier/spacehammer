@@ -496,6 +496,77 @@ obj.stop = function(self)
     return self
 end
 
+--- === LeftRightHotkey.modal ===
+---
+--- Create/manage modal keyboard shortcut environments
+
+obj.modal = {}
+obj.modal.__index = obj.modal
+
+--- LeftRightHotkey.modal:entered()
+--- Optional callback for when a modal is entered
+function obj.modal:entered() -- luacheck: ignore
+end
+
+--- LeftRightHotkey.modal:exited()
+--- Optional callback for when a modal is exited
+function obj.modal:exited() -- luacheck: ignore
+end
+
+--- LeftRightHotkey.modal:bind(mods, key, message, pressedfn, releasedfn, repeatfn) -> LeftRightHotkey.modal object
+--- Creates a hotkey that is enabled/disabled as the modal is entered/exited
+function obj.modal:bind(...)
+    table.insert(self.keys, obj.new(...))
+    return self
+end
+
+--- obj.modal:enter() -> LeftRightHotkey.modal object
+--- Enters modal state
+function obj.modal:enter()
+    log.d('Entering modal')
+    if self.k then
+        self.k:disable() -- disable the trigger that entered the modal
+    end
+    for _,hk in ipairs(self.keys) do hk:enable() end
+    self:entered()
+    return self
+end
+
+--- LeftRightHotkey.modal:exit() -> LeftRightHotkey.modal object
+--- Exits a modal state
+function obj.modal:exit()
+    for _,hk in ipairs(self.keys) do hk:disable() end
+    if (self.k) then
+        self.k:enable()
+    end
+    self:exited()
+    log.d('Exited modal')
+    return self
+end
+
+--- LeftRightHotkey.modal.new(mods, key, message) -> LeftRightHotkey.modal object
+--- Creates a new modal state, optionally with a global keyboard combination to trigger it
+function obj.modal.new(mods, key, message)
+    local m = setmetatable({ keys = {} }, obj.modal)
+    if key then
+        m.k = obj.bind(mods, key, message, function() m:enter() end)
+    end
+    log.d('Created modal hotkey')
+    return m
+end
+
+--- LeftRightHotkey.modal:delete()
+--- Deletes a modal hotkey object without calling :exited()
+function obj.modal:delete()
+    for _,hk in ipairs(self.keys) do
+        hk:delete()
+    end
+    if (self.k) then
+        self.k:delete()
+    end
+    log.d('Deleted modal')
+end
+
 -- Spoon Metadata definition and object return --
 
 -- for debugging purposes, may go away

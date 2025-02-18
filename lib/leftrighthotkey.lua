@@ -294,7 +294,31 @@ obj.new = function(self, ...)
     local specifiedMods = normalizeModsTable(args[1])
     local actualMods, queueIndex = convertModifiers(specifiedMods)
 
-    if queueIndex ~= 0 then
+    if queueIndex == 0 then
+        -- Allow binding without modifiers.
+        -- Replace the modifiers table with the (likely empty) actualMods.
+        -- The reason for explicitly calling the enable method for plain keys is that plain key bindings are not managed by the flag-watcher. In the left/right branch, hotkeys are conditionally enabled or disabled based on the current modifier flags, so their enablement depends on the flag watcher’s callback. However, plain hotkeys (with no modifiers) aren’t toggled by this mechanism. Calling the underlying hotkey’s enable method immediately upon creation guarantees that the binding is active without waiting for any modifier state changes.
+        -- The bind method is essentially a convenient wrapper that calls new() and then enable(). For left/right bindings this allows the hotkey to “wait” until the correct modifier state is detected before enabling. When no modifiers are provided, using the bind method would otherwise leave the plain hotkey disabled because it isn’t added to the queue that the flag watcher manages. Thus, an explicit enable in the plain-key branch is necessary to achieve the expected behavior.
+        args[1] = actualMods
+        local key     = args[2]
+        local keycode = keycodes.map[key]
+        if type(key) == "number" then keycode = key end
+        local newObject = setmetatable({
+            _modDesc    = "no-mod",
+            _queueIndex = 0,
+            _keycode    = keycode,
+            _hotkey     = hotkey.new(table.unpack(args)),
+            _enabled    = true,      -- we want it to be on all the time
+            _creationID = definitionIndex,
+        }, _LeftRightHotkeyObjMT)
+        existantHotKeys[newObject] = true
+
+        newObject._hotkey:enable()  -- explicitly enable it immediately
+        -- For simple key bindings, queuedHotKeys is bypassed entirely.
+
+        return newObject
+    else
+        -- Existing logic for left/right specific modifiers.
         args[1] = actualMods
         for i, v in ipairs(specifiedMods) do
             specifiedMods[i] = v:sub(1,1) .. v:sub(2,2):upper() .. v:sub(3)
@@ -318,8 +342,6 @@ obj.new = function(self, ...)
         existantHotKeys[newObject] = true
         queuedHotKeys[queueIndex][newObject] = true
         return newObject
-    else
-        error("you must specifiy one or more of lcmd, rcmd, lshift, rshift, lalt, ralt, lctrl, rctrl", 2)
     end
 end
 

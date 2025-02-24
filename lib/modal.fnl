@@ -166,6 +166,14 @@ switching menus in one place which is then powered by config.fnl.
     (enter-modal key)))
 
 
+(fn create-action-and-menu-trigger
+  [{:key key :action action}]
+  (let [action-fn (action->fn action)]
+    (fn []
+      (enter-modal key)
+      (hs.timer.doAfter 0.01 action-fn))))
+
+
 (fn select-trigger
   [item]
   "
@@ -176,6 +184,8 @@ switching menus in one place which is then powered by config.fnl.
   "
   (if (and item.action (= item.action :previous))
       previous-modal
+      (and item.action item.items)
+      (create-action-and-menu-trigger item)
       item.action
       (create-action-trigger item)
       item.items

@@ -39,7 +39,7 @@
 
 "
 alert :: str, { style }, seconds -> nil
-Shortcut for showing an alert on the primary screen for a specified duration
+Shortcut for showing an alert on the main screen for a specified duration
 Takes a message string, a style table, and the number of seconds to show alert
 Returns nil. This function causes side-effects.
 "
@@ -53,7 +53,7 @@ Returns nil. This function causes side-effects.
          "
          (hs.alert.show str
                         style
-                        (hs.screen.primaryScreen)
+                        (hs.screen.mainScreen)
                         seconds)))
 
 (global fw hs.window.focusedWindow)

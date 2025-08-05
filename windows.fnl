@@ -117,7 +117,7 @@
 
 (fn activate-app
   [app-name]
-  (hs.application.launchOrFocus app-name)
+  (hs.application.launchOrFocusByBundleID app-name)
   (let [app (hs.application.find app-name)]
     (when app
       (: app :activate)

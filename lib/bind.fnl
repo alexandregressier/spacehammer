@@ -1,4 +1,4 @@
-(local LeftRightHotkey (require :lib.leftrighthotkey))
+(local LeftRightHotkey (require :lib.vendor.leftrighthotkey))
 (local hyper (require :lib.hyper))
 (local {: contains?
         : map

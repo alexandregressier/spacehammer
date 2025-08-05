@@ -1,4 +1,4 @@
-(local LeftRightHotkey (require :lib.leftrighthotkey))
+(local LeftRightHotkey (require :lib.vendor.leftrighthotkey))
 (require-macros :lib.macros)
 (local {: find} (require :lib.functional))
 

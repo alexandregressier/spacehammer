@@ -10,7 +10,7 @@
         :split     split
         :some      some} (require :lib.functional))
 (local atom (require :lib.atom))
-(local LeftRightHotkey (require :lib.leftrighthotkey))
+(local LeftRightHotkey (require :lib.vendor.leftrighthotkey))
 (require-macros :lib.macros)
 (require-macros :lib.advice.macros)
 

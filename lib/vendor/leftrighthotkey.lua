@@ -135,13 +135,32 @@ end
 
 -- converts our modifiers to the actual modifiers sent to `hs.hotkey`
 local convertModifiers = function(specifiedMods)
-    local actualMods, queueIndex  = {}, 0
+    local actualMods, queueIndex = {}, 0
+    local hasLeftRightMods = false
 
+    -- First pass: check if any l/r specific modifiers exist
+    for _, v in pairs(specifiedMods) do
+        if v:match("^[lr]") then  -- starts with 'l' or 'r'
+            hasLeftRightMods = true
+            break
+        end
+    end
+
+    -- If no left/right specificity, use regular hotkey behavior
+    if not hasLeftRightMods then
+        for _, v in pairs(specifiedMods) do
+            local hotkeyModEquivalent = modiferBase[v] or v:lower()
+            table.insert(actualMods, hotkeyModEquivalent)
+        end
+        return actualMods, -1  -- Special flag indicating regular hotkey
+    end
+
+    -- Original left/right detection logic
     for _, v in pairs(specifiedMods) do
         queueIndex = queueIndex | (modifierMasks[v] or 0)
-        local hotkeyModEquivalant = modiferBase[v]
-        if hotkeyModEquivalant then
-            table.insert(actualMods, hotkeyModEquivalant)
+        local hotkeyModEquivalent = modiferBase[v]
+        if hotkeyModEquivalent then
+            table.insert(actualMods, hotkeyModEquivalent)
         else
             queueIndex = 0
             break
@@ -294,31 +313,27 @@ obj.new = function(self, ...)
     local specifiedMods = normalizeModsTable(args[1])
     local actualMods, queueIndex = convertModifiers(specifiedMods)
 
-    if queueIndex == 0 then
-        -- Allow binding without modifiers.
-        -- Replace the modifiers table with the (likely empty) actualMods.
-        -- The reason for explicitly calling the enable method for plain keys is that plain key bindings are not managed by the flag-watcher. In the left/right branch, hotkeys are conditionally enabled or disabled based on the current modifier flags, so their enablement depends on the flag watcher’s callback. However, plain hotkeys (with no modifiers) aren’t toggled by this mechanism. Calling the underlying hotkey’s enable method immediately upon creation guarantees that the binding is active without waiting for any modifier state changes.
-        -- The bind method is essentially a convenient wrapper that calls new() and then enable(). For left/right bindings this allows the hotkey to “wait” until the correct modifier state is detected before enabling. When no modifiers are provided, using the bind method would otherwise leave the plain hotkey disabled because it isn’t added to the queue that the flag watcher manages. Thus, an explicit enable in the plain-key branch is necessary to achieve the expected behavior.
+    if queueIndex == -1 then
+        -- Regular hotkey (no left/right specificity)
         args[1] = actualMods
-        local key     = args[2]
-        local keycode = keycodes.map[key]
-        if type(key) == "number" then keycode = key end
         local newObject = setmetatable({
-            _modDesc    = "no-mod",
-            _queueIndex = 0,
-            _keycode    = keycode,
+            _modDesc    = table.concat(actualMods, "+") or "no-mod",
+            _queueIndex = -1,
+            _keycode    = keycodes.map[args[2]] or args[2],
             _hotkey     = hotkey.new(table.unpack(args)),
-            _enabled    = true,      -- we want it to be on all the time
+            _enabled    = false,
             _creationID = definitionIndex,
         }, _LeftRightHotkeyObjMT)
+
+        -- Immediately enable for regular hotkeys
+        newObject._hotkey:enable()
+        newObject._enabled = true
+
         existantHotKeys[newObject] = true
-
-        newObject._hotkey:enable()  -- explicitly enable it immediately
-        -- For simple key bindings, queuedHotKeys is bypassed entirely.
-
         return newObject
-    else
-        -- Existing logic for left/right specific modifiers.
+
+    elseif queueIndex > 0 then
+        -- Original left/right hotkey logic
         args[1] = actualMods
         for i, v in ipairs(specifiedMods) do
             specifiedMods[i] = v:sub(1,1) .. v:sub(2,2):upper() .. v:sub(3)
@@ -342,6 +357,8 @@ obj.new = function(self, ...)
         existantHotKeys[newObject] = true
         queuedHotKeys[queueIndex][newObject] = true
         return newObject
+    else
+        error("you must specify one or more valid modifiers", 2)
     end
 end
 
